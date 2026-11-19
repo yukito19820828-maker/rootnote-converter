@@ -1,5 +1,7 @@
 import { FFmpeg } from '@ffmpeg/ffmpeg';
-import { toBlobURL, fetchFile } from '@ffmpeg/util';
+import { fetchFile } from '@ffmpeg/util';
+import coreURL from '@ffmpeg/core?url';
+import wasmURL from '@ffmpeg/core/wasm?url';
 
 const $=id=>document.getElementById(id);
 const input=$('audio'),convert=$('convert'),status=$('status'),bar=$('bar'),save=$('save');
@@ -25,13 +27,8 @@ async function engine(){
  ffmpeg=new FFmpeg();
  ffmpeg.on('log',({message})=>log(`FFmpeg: ${message}`));
  ffmpeg.on('progress',({progress})=>{if(Number.isFinite(progress))bar.style.width=`${Math.min(99,Math.max(0,progress*100))}%`;});
- const base='https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd';
- stage='Worker/Core読み込み';say('変換エンジン本体を読み込んでいます…');
- // Load the official single-thread core. FFmpeg.wasm creates its class worker internally;
- // supplying a separately fetched worker URL here can leave mobile browsers stuck during startup.
- const coreURL=await toBlobURL(`${base}/ffmpeg-core.js`,'text/javascript');
- const wasmURL=await toBlobURL(`${base}/ffmpeg-core.wasm`,'application/wasm');
- stage='Worker起動';say('変換エンジンを起動しています…');
+ stage='Worker/Core読み込み';say('端末内の変換エンジンを起動しています…');
+ // Both core JS and WASM are emitted as same-origin build assets, not fetched from a CDN.
  await ffmpeg.load({coreURL,wasmURL});
  return {fetchFile};
 }
