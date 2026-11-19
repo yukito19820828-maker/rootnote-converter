@@ -14,7 +14,7 @@ main{max-width:540px;margin:auto;padding:26px 18px 40px}.brand{text-align:center
 .panel{background:rgba(21,29,48,.94);border:1px solid var(--line);border-radius:20px;padding:18px;margin:14px 0;box-shadow:0 12px 30px #0003}
 .pick{display:block;text-align:center;border:1.5px dashed #52627e;border-radius:16px;padding:28px 12px;cursor:pointer}.pick .ico{font-size:34px}.pick strong{display:block;margin:8px}.pick small{color:var(--muted)}
 input[type=file]{display:none}.file{display:none;margin-top:14px;padding:12px;background:#0e1728;border-radius:12px;font-size:13px;overflow-wrap:anywhere}.file.show{display:block}
-.spec h2{font-size:14px;margin:0 0 12px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}.item{background:#0e1728;border-radius:12px;padding:11px}.item span{display:block;color:var(--muted);font-size:11px}.item b{font-size:14px}
+.spec h2{font-size:14px;margin:0 0 12px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}.item{background:#0e1728;border-radius:12px;padding:11px}.item span{display:block;color:var(--muted);font-size:11px}.item b{font-size:14px}.item select{width:100%;margin-top:3px;padding:7px 8px;border:1px solid #34445f;border-radius:8px;background:#17243a;color:#f8fafc;font-size:14px;font-weight:700}
 button,.download{width:100%;border:0;border-radius:14px;padding:15px;font-size:16px;font-weight:700;background:var(--accent);color:#082033;cursor:pointer;text-align:center;text-decoration:none;display:block}
 button:disabled{opacity:.45;cursor:not-allowed}.progress{height:8px;background:#0b1322;border-radius:20px;overflow:hidden;margin:12px 0}.bar{height:100%;width:0;background:var(--accent);transition:width .2s}
 .status{font-size:13px;color:var(--muted);min-height:22px;line-height:1.6}.download{display:none;background:#86efac;color:#052e16;margin-top:12px}.download.show{display:block}
@@ -32,8 +32,8 @@ button:disabled{opacity:.45;cursor:not-allowed}.progress{height:8px;background:#
 <input id="audio" type="file" accept=".wav,audio/wav,audio/x-wav">
 <div id="fileInfo" class="file"></div>
 </section>
-<section class="panel spec"><h2>変換設定（固定）</h2><div class="grid">
-<div class="item"><span>出力形式</span><b>FLAC</b></div><div class="item"><span>ビット深度</span><b>16 bit</b></div>
+<section class="panel spec"><h2>変換設定</h2><div class="grid">
+<div class="item"><span>出力形式</span><b>FLAC</b></div><div class="item"><span>ビット深度（選択）</span><select id="bitDepth" aria-label="ビット深度"><option value="16">16 bit</option><option value="24">24 bit</option></select></div>
 <div class="item"><span>サンプリング周波数</span><b>44,100 Hz</b></div><div class="item"><span>チャンネル</span><b>Stereo</b></div>
 <div class="item"><span>音量</span><b>変更なし</b></div><div class="item"><span>最大入力サイズ</span><b>80 MB</b></div>
 </div></section>
@@ -42,7 +42,7 @@ button:disabled{opacity:.45;cursor:not-allowed}.progress{height:8px;background:#
 <div id="status" class="status">WAVファイルを選択してください。</div><a id="save" class="download">FLACをスマホに保存</a>
 <div id="errorBox" class="error"><h3>⚠ エラー詳細</h3><pre id="errorText"></pre><div class="actions"><button id="copyError">エラーをコピー</button><button id="saveError">ログを保存</button></div></div>
 </section>
-<p class="note">・音源は端末内で処理し、変換のために音源データを外部サーバーへアップロードしません。<br>・初回起動時は変換エンジンの読み込みにインターネット接続が必要です。<br>・80MBは入力ファイル上限です。端末の空きメモリによっては処理できない場合があります。<br><span class="warn">※HTTPSで公開したURLから開いてください。ZIP内のHTMLを直接開く方式ではありません。</span></p>
+<p class="note">・音源は端末内で処理し、変換のために音源データを外部サーバーへアップロードしません。<br>・初回起動時は変換エンジンの読み込みにインターネット接続が必要です。<br>・ビット深度は16 bit／24 bitから選択できます。元音源が16 bitの場合、24 bitにしても元の音質情報は増えません。<br>・80MBは入力ファイル上限です。端末の空きメモリによっては処理できない場合があります。<br><span class="warn">※HTTPSで公開したURLから開いてください。ZIP内のHTMLを直接開く方式ではありません。</span></p>
 <div class="footer">RootNote Converter · PWA build</div>
 </main>
 <script type="module" src="./src/main.js"></script>
