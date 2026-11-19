@@ -4,7 +4,7 @@ import coreURL from '@ffmpeg/core?url';
 import wasmURL from '@ffmpeg/core/wasm?url';
 
 const $=id=>document.getElementById(id);
-const input=$('audio'),convert=$('convert'),status=$('status'),bar=$('bar'),save=$('save');
+const input=$('audio'),convert=$('convert'),status=$('status'),bar=$('bar'),save=$('save'),bitDepth=$('bitDepth');
 let selected=null,ffmpeg=null,outputUrl=null,busy=false,stage='待機',logs=[];
 const log=m=>{logs.push(`[${new Date().toLocaleTimeString()}] ${String(m)}`);if(logs.length>100)logs.shift();};
 const say=m=>{status.textContent=m;log(m);};
@@ -39,11 +39,11 @@ convert.addEventListener('click',async()=>{
   const {fetchFile}=await engine();
   stage='WAV読み込み';say('WAVを読み込んでいます…');await ffmpeg.writeFile(src,await fetchFile(selected));
   stage='FLAC変換';say('FLACへ変換しています…');
-  await ffmpeg.exec(['-hide_banner','-i',src,'-map_metadata','-1','-vn','-ac','2','-ar','44100','-sample_fmt','s16','-c:a','flac','-compression_level','5',dst]);
+  const depth=bitDepth.value==='24'?24:16;\n  const sampleFormat=depth===24?'s32':'s16';\n  await ffmpeg.exec(['-hide_banner','-i',src,'-map_metadata','-1','-vn','-ac','2','-ar','44100','-sample_fmt',sampleFormat,'-c:a','flac','-compression_level','5',dst]);
   stage='変換結果取得';say('変換結果を準備しています…');const data=await ffmpeg.readFile(dst);
   const blob=new Blob([data],{type:'audio/flac'});if(!blob.size)throw new Error('出力ファイルが空です。');
   outputUrl=URL.createObjectURL(blob);save.href=outputUrl;save.download=(selected.name.replace(/\.wav$/i,'')||'audio')+'_RootNote.flac';save.classList.add('show');
-  bar.style.width='100%';stage='完了';say(`変換完了：${(blob.size/1048576).toFixed(2)} MB`);
+  bar.style.width='100%';stage='完了';say(`変換完了（${depth} bit）：${(blob.size/1048576).toFixed(2)} MB`);
   await ffmpeg.deleteFile(src);await ffmpeg.deleteFile(dst);
  }catch(e){say('変換に失敗しました。エラー詳細を確認してください。');fail(e);}
  finally{busy=false;convert.disabled=!selected;}
