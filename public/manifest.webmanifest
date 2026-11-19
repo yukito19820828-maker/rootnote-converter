@@ -1,0 +1,12 @@
+{
+  "name": "RootNote Converter",
+  "short_name": "RootNote",
+  "description": "スマホ内でWAVをRootNote向けFLACに変換",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#111827",
+  "theme_color": "#111827",
+  "lang": "ja",
+  "icons": []
+}
