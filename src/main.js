@@ -4,7 +4,7 @@ import coreURL from '@ffmpeg/core?url';
 import wasmURL from '@ffmpeg/core/wasm?url';
 
 const $=id=>document.getElementById(id);
-const input=$('audio'),convert=$('convert'),status=$('status'),bar=$('bar'),save=$('save'),bitDepth=$('bitDepth');
+const input=$('audio'),convert=$('convert'),reset=$('reset'),status=$('status'),bar=$('bar'),save=$('save'),bitDepth=$('bitDepth');
 let selected=null,ffmpeg=null,outputUrl=null,busy=false,stage='待機',logs=[];
 const log=m=>{logs.push(`[${new Date().toLocaleTimeString()}] ${String(m)}`);if(logs.length>100)logs.shift();};
 const say=m=>{status.textContent=m;log(m);};
@@ -32,8 +32,27 @@ async function engine(){
  await ffmpeg.load({coreURL,wasmURL});
  return {fetchFile};
 }
+reset.addEventListener('click',()=>{
+ if(busy)return;
+ input.value='';
+ selected=null;
+ $('fileInfo').textContent='';
+ $('fileInfo').classList.remove('show');
+ save.classList.remove('show');
+ save.removeAttribute('href');
+ if(outputUrl){URL.revokeObjectURL(outputUrl);outputUrl=null;}
+ $('errorBox').classList.remove('show');
+ $('errorText').textContent='';
+ $('copyError').textContent='エラーをコピー';
+ bitDepth.value='16';
+ bar.style.width='0%';
+ logs=[];
+ stage='待機';
+ say('WAVファイルを選択してください。');
+ convert.disabled=true;
+});
 convert.addEventListener('click',async()=>{
- if(!selected||busy)return;busy=true;convert.disabled=true;save.classList.remove('show');$('errorBox').classList.remove('show');bar.style.width='0%';logs=[];
+ if(!selected||busy)return;busy=true;convert.disabled=true;reset.disabled=true;save.classList.remove('show');$('errorBox').classList.remove('show');bar.style.width='0%';logs=[];
  const src='input.wav',dst='rootnote.flac';
  try{
   const {fetchFile}=await engine();
@@ -48,7 +67,7 @@ convert.addEventListener('click',async()=>{
   bar.style.width='100%';stage='完了';say(`変換完了（${depth} bit）：${(blob.size/1048576).toFixed(2)} MB`);
   await ffmpeg.deleteFile(src);await ffmpeg.deleteFile(dst);
  }catch(e){say('変換に失敗しました。エラー詳細を確認してください。');fail(e);}
- finally{busy=false;convert.disabled=!selected;}
+ finally{busy=false;convert.disabled=!selected;reset.disabled=false;}
 });
 $('copyError').onclick=async()=>{try{await navigator.clipboard.writeText($('errorText').textContent);$('copyError').textContent='コピーしました';}catch(e){say('コピーできません。ログを保存してください。');}};
 $('saveError').onclick=()=>{const u=URL.createObjectURL(new Blob([$('errorText').textContent],{type:'text/plain'}));const a=document.createElement('a');a.href=u;a.download='RootNote_error_log.txt';a.click();setTimeout(()=>URL.revokeObjectURL(u),1500);};
