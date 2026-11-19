@@ -39,7 +39,9 @@ convert.addEventListener('click',async()=>{
   const {fetchFile}=await engine();
   stage='WAV読み込み';say('WAVを読み込んでいます…');await ffmpeg.writeFile(src,await fetchFile(selected));
   stage='FLAC変換';say('FLACへ変換しています…');
-  const depth=bitDepth.value==='24'?24:16;\n  const sampleFormat=depth===24?'s32':'s16';\n  await ffmpeg.exec(['-hide_banner','-i',src,'-map_metadata','-1','-vn','-ac','2','-ar','44100','-sample_fmt',sampleFormat,'-c:a','flac','-compression_level','5',dst]);
+  const depth=bitDepth.value==='24'?24:16; 
+  const sampleFormat=depth===24?'s32':'s16'; 
+  await ffmpeg.exec(['-hide_banner','-i',src,'-map_metadata','-1','-vn','-ac','2','-ar','44100','-sample_fmt',sampleFormat,'-c:a','flac','-compression_level','5',dst]);
   stage='変換結果取得';say('変換結果を準備しています…');const data=await ffmpeg.readFile(dst);
   const blob=new Blob([data],{type:'audio/flac'});if(!blob.size)throw new Error('出力ファイルが空です。');
   outputUrl=URL.createObjectURL(blob);save.href=outputUrl;save.download=(selected.name.replace(/\.wav$/i,'')||'audio')+'_RootNote.flac';save.classList.add('show');
