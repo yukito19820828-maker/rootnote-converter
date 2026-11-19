@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#111827">
+<meta name="description" content="スマホ内でWAVをRootNote向けFLACに変換">
+<link rel="manifest" href="./manifest.webmanifest">
+<title>RootNote Converter</title>
+<style>
+:root{color-scheme:dark;--panel:#151d30;--line:#2a3650;--muted:#9aa8bf;--accent:#7dd3fc}
+*{box-sizing:border-box}body{margin:0;background:linear-gradient(160deg,#111a2d,#080c17);color:#f8fafc;font-family:system-ui,-apple-system,"Noto Sans JP",sans-serif;min-height:100vh}
+main{max-width:540px;margin:auto;padding:26px 18px 40px}.brand{text-align:center;margin:12px 0 24px}.brand .mark{font-size:38px}.brand h1{font-size:25px;margin:8px 0 4px}.brand p{color:var(--muted);font-size:12px;letter-spacing:.13em;margin:0}
+.panel{background:rgba(21,29,48,.94);border:1px solid var(--line);border-radius:20px;padding:18px;margin:14px 0;box-shadow:0 12px 30px #0003}
+.pick{display:block;text-align:center;border:1.5px dashed #52627e;border-radius:16px;padding:28px 12px;cursor:pointer}.pick .ico{font-size:34px}.pick strong{display:block;margin:8px}.pick small{color:var(--muted)}
+input[type=file]{display:none}.file{display:none;margin-top:14px;padding:12px;background:#0e1728;border-radius:12px;font-size:13px;overflow-wrap:anywhere}.file.show{display:block}
+.spec h2{font-size:14px;margin:0 0 12px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}.item{background:#0e1728;border-radius:12px;padding:11px}.item span{display:block;color:var(--muted);font-size:11px}.item b{font-size:14px}
+button,.download{width:100%;border:0;border-radius:14px;padding:15px;font-size:16px;font-weight:700;background:var(--accent);color:#082033;cursor:pointer;text-align:center;text-decoration:none;display:block}
+button:disabled{opacity:.45;cursor:not-allowed}.progress{height:8px;background:#0b1322;border-radius:20px;overflow:hidden;margin:12px 0}.bar{height:100%;width:0;background:var(--accent);transition:width .2s}
+.status{font-size:13px;color:var(--muted);min-height:22px;line-height:1.6}.download{display:none;background:#86efac;color:#052e16;margin-top:12px}.download.show{display:block}
+.note{font-size:11px;color:var(--muted);line-height:1.7}.warn{color:#fbbf24}
+.error{display:none;border:1px solid #854d4d;background:#321b25;border-radius:14px;padding:13px;margin-top:14px}.error.show{display:block}.error h3{margin:0 0 8px;color:#fecaca;font-size:14px}.error pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:240px;overflow:auto;font-size:11px;line-height:1.5;color:#ffe4e6;margin:0}
+.actions{display:flex;gap:8px;margin-top:10px}.actions button{font-size:12px;padding:11px;background:#334155;color:#f8fafc}
+.footer{text-align:center;color:#64748b;font-size:11px;margin-top:24px}
+</style>
+</head>
+<body>
+<main>
+<header class="brand"><div class="mark">🎵</div><h1>RootNote Converter</h1><p>SUNO AUDIO CONVERTER</p></header>
+<section class="panel">
+<label class="pick" for="audio"><div class="ico">📂</div><strong>WAVファイルを選択</strong><small>スマホ本体から選択・最大80MB</small></label>
+<input id="audio" type="file" accept=".wav,audio/wav,audio/x-wav">
+<div id="fileInfo" class="file"></div>
+</section>
+<section class="panel spec"><h2>変換設定（固定）</h2><div class="grid">
+<div class="item"><span>出力形式</span><b>FLAC</b></div><div class="item"><span>ビット深度</span><b>16 bit</b></div>
+<div class="item"><span>サンプリング周波数</span><b>44,100 Hz</b></div><div class="item"><span>チャンネル</span><b>Stereo</b></div>
+<div class="item"><span>音量</span><b>変更なし</b></div><div class="item"><span>最大入力サイズ</span><b>80 MB</b></div>
+</div></section>
+<section class="panel">
+<button id="convert" disabled>変換開始</button><div class="progress"><div id="bar" class="bar"></div></div>
+<div id="status" class="status">WAVファイルを選択してください。</div><a id="save" class="download">FLACをスマホに保存</a>
+<div id="errorBox" class="error"><h3>⚠ エラー詳細</h3><pre id="errorText"></pre><div class="actions"><button id="copyError">エラーをコピー</button><button id="saveError">ログを保存</button></div></div>
+</section>
+<p class="note">・音源は端末内で処理し、変換のために音源データを外部サーバーへアップロードしません。<br>・初回起動時は変換エンジンの読み込みにインターネット接続が必要です。<br>・80MBは入力ファイル上限です。端末の空きメモリによっては処理できない場合があります。<br><span class="warn">※HTTPSで公開したURLから開いてください。ZIP内のHTMLを直接開く方式ではありません。</span></p>
+<div class="footer">RootNote Converter · PWA build</div>
+</main>
+<script type="module">
+const $=id=>document.getElementById(id);
+const input=$('audio'),convert=$('convert'),status=$('status'),bar=$('bar'),save=$('save');
+let selected=null,ffmpeg=null,outputUrl=null,busy=false,stage='待機',logs=[];
+const log=m=>{logs.push(`[${new Date().toLocaleTimeString()}] ${String(m)}`);if(logs.length>100)logs.shift();};
+const say=m=>{status.textContent=m;log(m);};
+function fail(e){
+ const details=[`段階: ${stage}`,`エラー: ${e?.message||String(e)}`,`種類: ${e?.name||'不明'}`,e?.stack||'',`URL: ${location.href}`,`ブラウザ: ${navigator.userAgent}`,'直近ログ:',...logs.slice(-40)].filter(Boolean).join('\n');
+ $('errorText').textContent=details;$('errorBox').classList.add('show');log(`ERROR ${e?.message||e}`);
+}
+input.addEventListener('change',()=>{
+ selected=input.files?.[0]||null;save.classList.remove('show');$('errorBox').classList.remove('show');
+ if(outputUrl){URL.revokeObjectURL(outputUrl);outputUrl=null;}
+ if(!selected){$('fileInfo').classList.remove('show');convert.disabled=true;return;}
+ $('fileInfo').textContent=`${selected.name} · ${(selected.size/1048576).toFixed(2)} MB`;$('fileInfo').classList.add('show');
+ if(!selected.name.toLowerCase().endsWith('.wav')){say('WAVファイルを選択してください。');convert.disabled=true;return;}
+ if(selected.size>80*1048576){say('80MBを超えています。');convert.disabled=true;return;}
+ say('準備完了。変換開始を押してください。');convert.disabled=false;
+});
+async function engine(){
+ if(ffmpeg?.loaded)return;
+ stage='FFmpegモジュール読み込み';say('変換エンジンを読み込んでいます…');
+ const [{FFmpeg},{toBlobURL,fetchFile}]=await Promise.all([
+  import('https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/index.js'),
+  import('https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/dist/esm/index.js')
+ ]);
+ ffmpeg=new FFmpeg();
+ ffmpeg.on('log',({message})=>log(`FFmpeg: ${message}`));
+ ffmpeg.on('progress',({progress})=>{if(Number.isFinite(progress))bar.style.width=`${Math.min(99,Math.max(0,progress*100))}%`;});
+ const base='https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd';
+ stage='Worker/Core読み込み';say('変換エンジン本体を読み込んでいます…');
+ // Create same-origin blob URLs for the worker and wasm core assets.
+ const workerURL=await toBlobURL('https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/dist/esm/worker.js','text/javascript');
+ const coreURL=await toBlobURL(`${base}/ffmpeg-core.js`,'text/javascript');
+ const wasmURL=await toBlobURL(`${base}/ffmpeg-core.wasm`,'application/wasm');
+ await ffmpeg.load({classWorkerURL:workerURL,coreURL,wasmURL});
+ return {fetchFile};
+}
+convert.addEventListener('click',async()=>{
+ if(!selected||busy)return;busy=true;convert.disabled=true;save.classList.remove('show');$('errorBox').classList.remove('show');bar.style.width='0%';logs=[];
+ const src='input.wav',dst='rootnote.flac';
+ try{
+  const {fetchFile}=await engine();
+  stage='WAV読み込み';say('WAVを読み込んでいます…');await ffmpeg.writeFile(src,await fetchFile(selected));
+  stage='FLAC変換';say('FLACへ変換しています…');
+  await ffmpeg.exec(['-hide_banner','-i',src,'-map_metadata','-1','-vn','-ac','2','-ar','44100','-sample_fmt','s16','-c:a','flac','-compression_level','5',dst]);
+  stage='変換結果取得';say('変換結果を準備しています…');const data=await ffmpeg.readFile(dst);
+  const blob=new Blob([data],{type:'audio/flac'});if(!blob.size)throw new Error('出力ファイルが空です。');
+  outputUrl=URL.createObjectURL(blob);save.href=outputUrl;save.download=(selected.name.replace(/\.wav$/i,'')||'audio')+'_RootNote.flac';save.classList.add('show');
+  bar.style.width='100%';stage='完了';say(`変換完了：${(blob.size/1048576).toFixed(2)} MB`);
+  await ffmpeg.deleteFile(src);await ffmpeg.deleteFile(dst);
+ }catch(e){say('変換に失敗しました。エラー詳細を確認してください。');fail(e);}
+ finally{busy=false;convert.disabled=!selected;}
+});
+$('copyError').onclick=async()=>{try{await navigator.clipboard.writeText($('errorText').textContent);$('copyError').textContent='コピーしました';}catch(e){say('コピーできません。ログを保存してください。');}};
+$('saveError').onclick=()=>{const u=URL.createObjectURL(new Blob([$('errorText').textContent],{type:'text/plain'}));const a=document.createElement('a');a.href=u;a.download='RootNote_error_log.txt';a.click();setTimeout(()=>URL.revokeObjectURL(u),1500);};
+if('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+ navigator.serviceWorker.register('./sw.js').catch(e=>log(`Service Worker registration: ${e.message}`));
+}
+</script>
+</body></html>
